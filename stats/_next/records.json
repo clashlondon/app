@@ -1,0 +1,68 @@
+{
+  "mini-css-extract-plugin node_modules/@zeit/next-css/node_modules/css-loader/index.js??ref--5-1!node_modules/sass-loader/lib/loader.js??ref--5-2!styles/app.scss": [
+    {
+      "modules": {
+        "byIdentifier": {},
+        "usedIds": {}
+      },
+      "chunks": {
+        "byName": {
+          "mini-css-extract-plugin": 0
+        },
+        "bySource": {},
+        "usedIds": [
+          0
+        ]
+      }
+    }
+  ],
+  "modules": {
+    "byIdentifier": {
+      "css node_modules/@zeit/next-css/node_modules/css-loader/index.js??ref--5-1!node_modules/sass-loader/lib/loader.js??ref--5-2!node_modules/bootstrap/dist/css/bootstrap.min.css 0": 0,
+      "css node_modules/@zeit/next-css/node_modules/css-loader/index.js??ref--5-1!node_modules/sass-loader/lib/loader.js??ref--5-2!styles/app.scss 0": 1
+    },
+    "usedIds": {
+      "0": 0,
+      "1": 1
+    }
+  },
+  "chunks": {
+    "byName": {
+      "static/runtime/webpack.js": 0,
+      "framework": 1,
+      "1c8efbdd": 2,
+      "3bc900e9a69b69d06f2c6f123a7c3e280c6abe3d": 3,
+      "811e6288d402a944e6cc7706c35e6ea019c80c59": 4,
+      "ab2599142c94efa7ca18a671718363cd5bb6c808": 5,
+      "80f600a5": 6,
+      "static/NtpU3yNRicS_lFGYk_V_p/pages/_app.js": 7,
+      "static/NtpU3yNRicS_lFGYk_V_p/pages/_error.js": 8,
+      "static/NtpU3yNRicS_lFGYk_V_p/pages/index.js": 9,
+      "static/runtime/main.js": 10,
+      "static/runtime/polyfills.js": 11,
+      "styles": 12,
+      "8ac0e00777f513b6c494d92ba91b1f1a875ca23f": 13,
+      "9b9c764ed7e6acfc417f0684739c44b91b33187f": 14,
+      "e8ada03ad5bc5cf9a5f5e17cd8fef64d83d28a37": 15,
+      "static/dn9micMIRmHyEDOU8So8a/pages/_app.js": 16,
+      "static/dn9micMIRmHyEDOU8So8a/pages/_error.js": 17,
+      "static/dn9micMIRmHyEDOU8So8a/pages/index.js": 18
+    },
+    "bySource": {},
+    "usedIds": [
+      0,
+      1,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      2,
+      6
+    ]
+  }
+}
