@@ -120,7 +120,7 @@ const WarPerformance = (props) => {
           </thead>
           <tbody>
             {sortedData.map((p, i) => {
-              let className = p.score < -1 ? 'bg-danger' : p.score <= 1 ? 'table-danger' : p.score >= 8 ? 'table-warning' : 'table-success'
+              let className = p.score < -1 ? 'bg-danger' : p.score >= 8 ? 'table-warning' : p.score >= 2 ? 'table-success' : null
               className += p.isMember ? ' member' : ''
               return (
                 <tr key={i}>
