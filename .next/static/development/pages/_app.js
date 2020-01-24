@@ -19,7 +19,7 @@ var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
 
 function Navigation() {
   return __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["Nav"], {
-    vertical: true,
+    tabs: true,
     __source: {
       fileName: _jsxFileName,
       lineNumber: 5
@@ -32,54 +32,26 @@ function Navigation() {
     },
     __self: this
   }, __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavLink"], {
-    active: true,
-    href: "#",
+    href: "/",
     __source: {
       fileName: _jsxFileName,
       lineNumber: 7
     },
     __self: this
-  }, "Active")), __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavItem"], {
+  }, "Clan")), __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavItem"], {
     __source: {
       fileName: _jsxFileName,
       lineNumber: 11
     },
     __self: this
   }, __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavLink"], {
-    href: "#",
+    href: "/war",
     __source: {
       fileName: _jsxFileName,
       lineNumber: 12
     },
     __self: this
-  }, "Link")), __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavItem"], {
-    __source: {
-      fileName: _jsxFileName,
-      lineNumber: 14
-    },
-    __self: this
-  }, __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavLink"], {
-    href: "#",
-    __source: {
-      fileName: _jsxFileName,
-      lineNumber: 15
-    },
-    __self: this
-  }, "Another Link")), __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavItem"], {
-    __source: {
-      fileName: _jsxFileName,
-      lineNumber: 17
-    },
-    __self: this
-  }, __jsx(shards_react__WEBPACK_IMPORTED_MODULE_1__["NavLink"], {
-    disabled: true,
-    href: "#",
-    __source: {
-      fileName: _jsxFileName,
-      lineNumber: 18
-    },
-    __self: this
-  }, "Disabled Link")));
+  }, "War Stats")));
 }
 
 /* harmony default export */ __webpack_exports__["default"] = (Navigation);

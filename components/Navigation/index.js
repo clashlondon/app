@@ -2,21 +2,15 @@ import { Nav, NavItem, NavLink } from "shards-react";
 
 function Navigation() {
   return (
-    <Nav vertical={true}>
+    <Nav tabs>
       <NavItem>
-        <NavLink active href="#">
-          Active
+        <NavLink href="/">
+          Clan
         </NavLink>
       </NavItem>
       <NavItem>
-        <NavLink href="#">Link</NavLink>
-      </NavItem>
-      <NavItem>
-        <NavLink href="#">Another Link</NavLink>
-      </NavItem>
-      <NavItem>
-        <NavLink disabled href="#">
-          Disabled Link
+        <NavLink href="/war">
+          War Stats
         </NavLink>
       </NavItem>
     </Nav>

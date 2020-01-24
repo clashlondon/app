@@ -97,21 +97,30 @@ module.exports =
 /*!**********************!*\
   !*** ./api/index.js ***!
   \**********************/
-/*! exports provided: ClanData, WarLog */
+/*! exports provided: Clan, Members, WarLog, CurrentWar */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ClanData", function() { return ClanData; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Clan", function() { return Clan; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Members", function() { return Members; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "WarLog", function() { return WarLog; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CurrentWar", function() { return CurrentWar; });
 /* harmony import */ var isomorphic_unfetch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! isomorphic-unfetch */ "isomorphic-unfetch");
 /* harmony import */ var isomorphic_unfetch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(isomorphic_unfetch__WEBPACK_IMPORTED_MODULE_0__);
 
 const headers = {
   authorization: `Bearer ${"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6Ijg2Y2RhNGFlLTEwYzktNGFlYy1hODk3LWM0ZGY5NjY3MjU0YSIsImlhdCI6MTU3OTYzMzUxOSwic3ViIjoiZGV2ZWxvcGVyLzY1M2FmYzA2LTlkYjAtMjU0NC03OWM3LTI5Yjk1N2U1MWIzNyIsInNjb3BlcyI6WyJyb3lhbGUiXSwibGltaXRzIjpbeyJ0aWVyIjoiZGV2ZWxvcGVyL3NpbHZlciIsInR5cGUiOiJ0aHJvdHRsaW5nIn0seyJjaWRycyI6WyI1LjY0LjI0NC4xNTYiXSwidHlwZSI6ImNsaWVudCJ9XX0.qsimTo_13OCE-t6fg88raG2wxqh118nreVEUl0iV85yIjl_9kZDMJ9HsyPBRjhAmb9JUXJDkUEPyl1ISFAUY-Q"}`
 };
-async function ClanData() {
+async function Clan() {
   const res = await isomorphic_unfetch__WEBPACK_IMPORTED_MODULE_0___default()(`https://api.clashroyale.com/v1/clans/%238G290Q0`, {
+    headers
+  });
+  const data = await res.json();
+  return data;
+}
+async function Members() {
+  const res = await isomorphic_unfetch__WEBPACK_IMPORTED_MODULE_0___default()(`https://api.clashroyale.com/v1/clans/%238G290Q0/members`, {
     headers
   });
   const data = await res.json();
@@ -119,6 +128,13 @@ async function ClanData() {
 }
 async function WarLog() {
   const res = await isomorphic_unfetch__WEBPACK_IMPORTED_MODULE_0___default()(`https://api.clashroyale.com/v1/clans/%238G290Q0/warlog`, {
+    headers
+  });
+  const data = await res.json();
+  return data;
+}
+async function CurrentWar() {
+  const res = await isomorphic_unfetch__WEBPACK_IMPORTED_MODULE_0___default()(`https://api.clashroyale.com/v1/clans/%238G290Q0/currentwar`, {
     headers
   });
   const data = await res.json();
@@ -159,10 +175,29 @@ class WarUser {
     this.battles = battlesPlayed;
     this.totalBattles = numberOfBattles;
     this.cards = cardsEarned;
+    this.isMember = true;
+    this.lossStreak = 0;
+    this.winStreak = 0;
   }
 
   addToKey(key, value) {
     this[key] += value;
+  }
+
+  setMember(state) {
+    this.isMember = state;
+  }
+
+  winLoss(wins, losses) {
+    if (losses > 0 && wins === 0) {
+      this.lossStreak += losses;
+      this.winStreak = 0;
+    }
+
+    if (wins > 0) {
+      this.winStreak += wins;
+      this.lossStreak = 0;
+    }
   }
 
   get loss() {
@@ -186,12 +221,13 @@ class WarUser {
   }
 
   get score() {
+    if (this.battles === 0) return 0;
     return (this.wins * (this.wins / this.battles) - this.battlesMissed * 2.5 * this.battlesMissed + this.wins * 0.5).toFixed(2);
   }
 
 }
 
-const processData = items => {
+const processData = (items, clan) => {
   let participants = [];
 
   const findUser = name => participants.find(p => p.name === name);
@@ -208,7 +244,13 @@ const processData = items => {
       } else {
         userObj = new WarUser(user);
         participants.push(userObj);
-      }
+      } // set is member
+
+
+      userObj.setMember(clan.memberList.find(m => m.name === userObj.name)); // record wins losses per war
+
+      let losses = user.numberOfBattles - user.wins;
+      userObj.winLoss(user.wins, losses);
     });
   });
   return participants;
@@ -230,7 +272,7 @@ const WarPerformance = props => {
   const {
     0: data,
     1: setData
-  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(processData(props.items));
+  } = Object(react__WEBPACK_IMPORTED_MODULE_1__["useState"])(processData(props.items, props.clan));
   const sortedData = sortData(data, sort, alt);
 
   const clickSort = newSort => {
@@ -241,181 +283,198 @@ const WarPerformance = props => {
     }
   };
 
-  return __jsx(react__WEBPACK_IMPORTED_MODULE_1___default.a.Fragment, null, __jsx("header", {
-    className: "jsx-309811624" + " " + "p-4",
+  return __jsx(react__WEBPACK_IMPORTED_MODULE_1___default.a.Fragment, null, __jsx("div", {
+    className: "jsx-1736245729" + " " + "table-responsive",
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 83
-    },
-    __self: undefined
-  }, __jsx("h1", {
-    className: "jsx-309811624",
-    __source: {
-      fileName: _jsxFileName,
-      lineNumber: 84
-    },
-    __self: undefined
-  }, "ClashLondon")), __jsx("div", {
-    className: "jsx-309811624" + " " + "table-responsive",
-    __source: {
-      fileName: _jsxFileName,
-      lineNumber: 86
+      lineNumber: 106
     },
     __self: undefined
   }, __jsx("table", {
-    className: "jsx-309811624" + " " + 'table table-sm',
+    className: "jsx-1736245729" + " " + 'table table-sm',
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 87
+      lineNumber: 107
     },
     __self: undefined
   }, __jsx("thead", {
-    className: "jsx-309811624",
+    className: "jsx-1736245729",
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 88
+      lineNumber: 108
     },
     __self: undefined
   }, __jsx("tr", {
-    className: "jsx-309811624",
+    className: "jsx-1736245729",
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 89
+      lineNumber: 109
     },
     __self: undefined
   }, __jsx("th", {
-    className: "jsx-309811624",
+    className: "jsx-1736245729",
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 90
+      lineNumber: 110
     },
     __self: undefined
   }, "Name"), __jsx("th", {
     onClick: () => clickSort('score'),
-    className: "jsx-309811624" + " " + ((sort === 'score' ? 'active' : null) || ""),
+    className: "jsx-1736245729" + " " + ((sort === 'score' ? 'active' : null) || ""),
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 91
+      lineNumber: 111
     },
     __self: undefined
   }, "Score"), __jsx("th", {
     onClick: () => clickSort('totalBattles'),
-    className: "jsx-309811624" + " " + ((sort === 'totalBattles' ? 'active' : null) || ""),
+    className: "jsx-1736245729" + " " + ((sort === 'totalBattles' ? 'active' : null) || ""),
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 92
+      lineNumber: 112
     },
     __self: undefined
   }, "Total Battles"), __jsx("th", {
     onClick: () => clickSort('wins'),
-    className: "jsx-309811624" + " " + ((sort === 'wins' ? 'active' : null) || ""),
+    className: "jsx-1736245729" + " " + ((sort === 'wins' ? 'active' : null) || ""),
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 93
+      lineNumber: 113
     },
     __self: undefined
   }, "Wins"), __jsx("th", {
     onClick: () => clickSort('loss'),
-    className: "jsx-309811624" + " " + ((sort === 'loss' ? 'active' : null) || ""),
+    className: "jsx-1736245729" + " " + ((sort === 'loss' ? 'active' : null) || ""),
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 94
+      lineNumber: 114
     },
     __self: undefined
   }, "Losses"), __jsx("th", {
-    onClick: () => clickSort('ratio'),
-    className: "jsx-309811624" + " " + ((sort === 'ratio' ? 'active' : null) || ""),
+    onClick: () => clickSort('winStreak'),
+    className: "jsx-1736245729" + " " + ((sort === 'winStreak' ? 'active' : null) || ""),
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 95
+      lineNumber: 115
+    },
+    __self: undefined
+  }, "Win Streak"), __jsx("th", {
+    onClick: () => clickSort('lossStreak'),
+    className: "jsx-1736245729" + " " + ((sort === 'lossStreak' ? 'active' : null) || ""),
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 116
+    },
+    __self: undefined
+  }, "Loss Streak"), __jsx("th", {
+    onClick: () => clickSort('ratio'),
+    className: "jsx-1736245729" + " " + ((sort === 'ratio' ? 'active' : null) || ""),
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 117
     },
     __self: undefined
   }, "Win Ratio", __jsx("span", {
-    className: "jsx-309811624",
+    className: "jsx-1736245729",
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 95
+      lineNumber: 117
     },
     __self: undefined
   }, "wins/battles")), __jsx("th", {
     onClick: () => clickSort('battlesMissed'),
-    className: "jsx-309811624" + " " + ((sort === 'battlesMissed' ? 'active' : null) || ""),
+    className: "jsx-1736245729" + " " + ((sort === 'battlesMissed' ? 'active' : null) || ""),
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 96
+      lineNumber: 118
     },
     __self: undefined
   }, "Battles Missed"))), __jsx("tbody", {
-    className: "jsx-309811624",
+    className: "jsx-1736245729",
     __source: {
       fileName: _jsxFileName,
-      lineNumber: 99
+      lineNumber: 121
     },
     __self: undefined
   }, sortedData.map((p, i) => {
     let className = p.score < -1 ? 'bg-danger' : p.score <= 1 ? 'table-danger' : p.score >= 8 ? 'table-warning' : 'table-success';
+    className += p.isMember ? ' member' : '';
     return __jsx("tr", {
       key: i,
-      className: "jsx-309811624",
+      className: "jsx-1736245729",
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 103
+        lineNumber: 126
       },
       __self: undefined
     }, __jsx("td", {
-      className: "jsx-309811624" + " " + (className || ""),
+      className: "jsx-1736245729" + " " + (className || ""),
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 104
+        lineNumber: 127
       },
       __self: undefined
     }, p.name), __jsx("td", {
-      className: "jsx-309811624",
+      className: "jsx-1736245729",
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 105
+        lineNumber: 128
       },
       __self: undefined
     }, p.score), __jsx("td", {
-      className: "jsx-309811624",
+      className: "jsx-1736245729",
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 106
+        lineNumber: 129
       },
       __self: undefined
     }, p.totalBattles), __jsx("td", {
-      className: "jsx-309811624",
+      className: "jsx-1736245729",
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 107
+        lineNumber: 130
       },
       __self: undefined
     }, p.wins), __jsx("td", {
-      className: "jsx-309811624",
+      className: "jsx-1736245729",
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 108
+        lineNumber: 131
       },
       __self: undefined
     }, p.loss), __jsx("td", {
-      className: "jsx-309811624",
+      className: "jsx-1736245729",
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 109
+        lineNumber: 132
+      },
+      __self: undefined
+    }, p.winStreak), __jsx("td", {
+      className: "jsx-1736245729",
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 133
+      },
+      __self: undefined
+    }, p.lossStreak), __jsx("td", {
+      className: "jsx-1736245729",
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 134
       },
       __self: undefined
     }, p.ratio.toFixed(2)), __jsx("td", {
-      className: "jsx-309811624",
+      className: "jsx-1736245729",
       __source: {
         fileName: _jsxFileName,
-        lineNumber: 110
+        lineNumber: 135
       },
       __self: undefined
     }, p.battlesMissed));
   })))), __jsx(styled_jsx_style__WEBPACK_IMPORTED_MODULE_0___default.a, {
-    id: "309811624",
+    id: "1736245729",
     __self: undefined
-  }, ".table-responsive.jsx-309811624{overflow-x:initial;}.table.jsx-309811624{width:100%;}.table.jsx-309811624 thead.jsx-309811624{font-weight:bold;}.table.jsx-309811624 thead.jsx-309811624 th.jsx-309811624{cursor:pointer;position:-webkit-sticky;position:sticky;top:0;background:white;min-width:8rem;}.table.jsx-309811624 thead.jsx-309811624 th.jsx-309811624 span.jsx-309811624{display:block;font-size:0.5rem;}.table.jsx-309811624 thead.jsx-309811624 th.active.jsx-309811624{color:blue;}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9tYnAvU2l0ZXMvbG9uZG9uLWNsYXNoLW5leHRqcy9jb21wb25lbnRzL1dhclBlcmZvcm1hbmNlLmpzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQW9Ia0IsQUFHOEIsQUFHUixBQUdNLEFBR0YsQUFPRCxBQUlILFdBaEJiLEFBaUJBLEdBSm1CLENBUEQsRUFIbEIsRUFOQSxZQWlCQSx3QkFQUSxNQUNXLGlCQUNGLGVBQ2pCIiwiZmlsZSI6Ii9Vc2Vycy9tYnAvU2l0ZXMvbG9uZG9uLWNsYXNoLW5leHRqcy9jb21wb25lbnRzL1dhclBlcmZvcm1hbmNlLmpzIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgdXNlU3RhdGUgfSBmcm9tICdyZWFjdCdcblxuY2xhc3MgV2FyVXNlciB7XG4gIGNvbnN0cnVjdG9yKHtuYW1lLCB3aW5zLCBiYXR0bGVzUGxheWVkLCBjYXJkc0Vhcm5lZCwgbnVtYmVyT2ZCYXR0bGVzfSkge1xuICAgIHRoaXMubmFtZSA9IG5hbWVcbiAgICB0aGlzLndpbnMgPSB3aW5zXG4gICAgdGhpcy5iYXR0bGVzID0gYmF0dGxlc1BsYXllZFxuICAgIHRoaXMudG90YWxCYXR0bGVzID0gbnVtYmVyT2ZCYXR0bGVzXG4gICAgdGhpcy5jYXJkcyA9IGNhcmRzRWFybmVkXG4gIH1cblxuICBhZGRUb0tleShrZXksIHZhbHVlKSB7XG4gICAgdGhpc1trZXldICs9IHZhbHVlXG4gIH1cblxuICBnZXQgbG9zcygpIHtcbiAgICByZXR1cm4gdGhpcy5iYXR0bGVzIC0gdGhpcy53aW5zXG4gIH1cblxuICBnZXQgcmF0aW8oKSB7XG4gICAgcmV0dXJuIHRoaXMud2lucyAvIHRoaXMudG90YWxCYXR0bGVzXG4gIH1cblxuICBnZXQgYmF0dGxlc01pc3NlZCgpIHtcbiAgICByZXR1cm4gdGhpcy50b3RhbEJhdHRsZXMgLSB0aGlzLmJhdHRsZXNcbiAgfVxuXG4gIGdldCBpblJlc3BlY3QoKSB7XG4gICAgcmV0dXJuIHRoaXMucmF0aW8gPj0gMC43NSB8fCB0aGlzLmxvc3MgPT09IDAgJiYgdGhpcy5taXNzZWQgPT09IDBcbiAgfVxuXG4gIGdldCBpbkRhbmdlcigpIHtcbiAgICByZXR1cm4gdGhpcy5yYXRpbyA8PSAwLjI1IHx8IHRoaXMuYmF0dGxlc01pc3NlZCA+PSAzXG4gIH1cblxuICBnZXQgc2NvcmUoKSB7XG4gICAgcmV0dXJuICh0aGlzLndpbnMgKiAodGhpcy53aW5zIC8gdGhpcy5iYXR0bGVzKSAtICgodGhpcy5iYXR0bGVzTWlzc2VkICogMi41KSAqIHRoaXMuYmF0dGxlc01pc3NlZCkgKyAodGhpcy53aW5zICogMC41KSkudG9GaXhlZCgyKVxuICB9XG59XG5cbmNvbnN0IHByb2Nlc3NEYXRhID0gKGl0ZW1zKSA9PiB7XG4gIGxldCBwYXJ0aWNpcGFudHMgPSBbXVxuICBjb25zdCBmaW5kVXNlciA9IChuYW1lKSA9PiBwYXJ0aWNpcGFudHMuZmluZCgocCkgPT4gcC5uYW1lID09PSBuYW1lKTtcbiAgaXRlbXMuZm9yRWFjaCgod2FyLCBpKSA9PiB7XG4gICAgICB3YXIucGFydGljaXBhbnRzLmZvckVhY2goKHVzZXIpID0+IHtcbiAgICAgICAgICB2YXIgdXNlck9iaiA9IGZpbmRVc2VyKHVzZXIubmFtZSlcbiAgICAgICAgICBpZiAoISF1c2VyT2JqKSB7XG4gICAgICAgICAgICAgIHVzZXJPYmouYWRkVG9LZXkoJ2JhdHRsZXMnLCB1c2VyLmJhdHRsZXNQbGF5ZWQpXG4gICAgICAgICAgICAgIHVzZXJPYmouYWRkVG9LZXkoJ3dpbnMnLCB1c2VyLndpbnMpXG4gICAgICAgICAgICAgIHVzZXJPYmouYWRkVG9LZXkoJ2NhcmRzJywgdXNlci5jYXJkc0Vhcm5lZClcbiAgICAgICAgICAgICAgdXNlck9iai5hZGRUb0tleSgndG90YWxCYXR0bGVzJywgdXNlci5udW1iZXJPZkJhdHRsZXMpXG4gICAgICAgICAgfSBlbHNlIHtcbiAgICAgICAgICAgICAgdXNlck9iaiA9IG5ldyBXYXJVc2VyKHVzZXIpXG4gICAgICAgICAgICAgIHBhcnRpY2lwYW50cy5wdXNoKHVzZXJPYmopXG4gICAgICAgICAgfVxuICAgICAgfSlcbiAgfSlcbiAgcmV0dXJuIHBhcnRpY2lwYW50c1xufVxuXG5jb25zdCBzb3J0RGF0YSA9IChpdGVtcywga2V5LCBhbHQpID0+IHtcbiAgcmV0dXJuIGl0ZW1zLnNvcnQoKGEsIGIpID0+IGFsdCA/IGFba2V5XSAtIGJba2V5XSA6IGJba2V5XSAtIGFba2V5XSlcbn1cblxuY29uc3QgV2FyUGVyZm9ybWFuY2UgPSAocHJvcHMpID0+IHtcblxuICBjb25zdCBbc29ydCwgc2V0U29ydF0gPSB1c2VTdGF0ZSgnc2NvcmUnKVxuICBjb25zdCBbYWx0LCBzZXRBbHRdID0gdXNlU3RhdGUoZmFsc2UpXG4gIGNvbnN0IFtkYXRhLCBzZXREYXRhXSA9IHVzZVN0YXRlKHByb2Nlc3NEYXRhKHByb3BzLml0ZW1zKSlcblxuICBjb25zdCBzb3J0ZWREYXRhID0gc29ydERhdGEoZGF0YSwgc29ydCwgYWx0KVxuXG4gIGNvbnN0IGNsaWNrU29ydCA9IChuZXdTb3J0KSA9PiB7XG4gICAgaWYgKG5ld1NvcnQgPT09IHNvcnQpIHtcbiAgICAgIHNldEFsdCghYWx0KVxuICAgIH0gZWxzZSB7XG4gICAgICBzZXRTb3J0KG5ld1NvcnQpXG4gICAgfVxuICB9XG5cbiAgcmV0dXJuIChcbiAgICA8PlxuICAgICAgPGhlYWRlciBjbGFzc05hbWU9XCJwLTRcIj5cbiAgICAgICAgPGgxPkNsYXNoTG9uZG9uPC9oMT5cbiAgICAgIDwvaGVhZGVyPlxuICAgICAgPGRpdiBjbGFzc05hbWU9XCJ0YWJsZS1yZXNwb25zaXZlXCI+XG4gICAgICAgIDx0YWJsZSBjbGFzc05hbWU9eyd0YWJsZSB0YWJsZS1zbSd9PlxuICAgICAgICAgIDx0aGVhZD5cbiAgICAgICAgICAgIDx0cj5cbiAgICAgICAgICAgICAgPHRoPk5hbWU8L3RoPlxuICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPXtzb3J0ID09PSAnc2NvcmUnID8gJ2FjdGl2ZScgOiBudWxsfSBvbkNsaWNrPXsoKCkgPT4gY2xpY2tTb3J0KCdzY29yZScpKX0+U2NvcmU8L3RoPlxuICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPXtzb3J0ID09PSAndG90YWxCYXR0bGVzJyA/ICdhY3RpdmUnIDogbnVsbH0gb25DbGljaz17KCgpID0+IGNsaWNrU29ydCgndG90YWxCYXR0bGVzJykpfT5Ub3RhbCBCYXR0bGVzPC90aD5cbiAgICAgICAgICAgICAgPHRoIGNsYXNzTmFtZT17c29ydCA9PT0gJ3dpbnMnID8gJ2FjdGl2ZScgOiBudWxsfSBvbkNsaWNrPXsoKCkgPT4gY2xpY2tTb3J0KCd3aW5zJykpfT5XaW5zPC90aD5cbiAgICAgICAgICAgICAgPHRoIGNsYXNzTmFtZT17c29ydCA9PT0gJ2xvc3MnID8gJ2FjdGl2ZScgOiBudWxsfSBvbkNsaWNrPXsoKCkgPT4gY2xpY2tTb3J0KCdsb3NzJykpfT5Mb3NzZXM8L3RoPlxuICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPXtzb3J0ID09PSAncmF0aW8nID8gJ2FjdGl2ZScgOiBudWxsfSBvbkNsaWNrPXsoKCkgPT4gY2xpY2tTb3J0KCdyYXRpbycpKX0+V2luIFJhdGlvPHNwYW4+d2lucy9iYXR0bGVzPC9zcGFuPjwvdGg+XG4gICAgICAgICAgICAgIDx0aCBjbGFzc05hbWU9e3NvcnQgPT09ICdiYXR0bGVzTWlzc2VkJyA/ICdhY3RpdmUnIDogbnVsbH0gb25DbGljaz17KCgpID0+IGNsaWNrU29ydCgnYmF0dGxlc01pc3NlZCcpKX0+QmF0dGxlcyBNaXNzZWQ8L3RoPlxuICAgICAgICAgICAgPC90cj5cbiAgICAgICAgICA8L3RoZWFkPlxuICAgICAgICAgIDx0Ym9keT5cbiAgICAgICAgICAgIHtzb3J0ZWREYXRhLm1hcCgocCwgaSkgPT4ge1xuICAgICAgICAgICAgICBsZXQgY2xhc3NOYW1lID0gcC5zY29yZSA8IC0xID8gJ2JnLWRhbmdlcicgOiBwLnNjb3JlIDw9IDEgPyAndGFibGUtZGFuZ2VyJyA6IHAuc2NvcmUgPj0gOCA/ICd0YWJsZS13YXJuaW5nJyA6ICd0YWJsZS1zdWNjZXNzJ1xuICAgICAgICAgICAgICByZXR1cm4gKFxuICAgICAgICAgICAgICAgIDx0ciBrZXk9e2l9PlxuICAgICAgICAgICAgICAgICAgPHRkIGNsYXNzTmFtZT17Y2xhc3NOYW1lfT57cC5uYW1lfTwvdGQ+XG4gICAgICAgICAgICAgICAgICA8dGQ+e3Auc2NvcmV9PC90ZD5cbiAgICAgICAgICAgICAgICAgIDx0ZD57cC50b3RhbEJhdHRsZXN9PC90ZD5cbiAgICAgICAgICAgICAgICAgIDx0ZD57cC53aW5zfTwvdGQ+XG4gICAgICAgICAgICAgICAgICA8dGQ+e3AubG9zc308L3RkPlxuICAgICAgICAgICAgICAgICAgPHRkPntwLnJhdGlvLnRvRml4ZWQoMil9PC90ZD5cbiAgICAgICAgICAgICAgICAgIDx0ZD57cC5iYXR0bGVzTWlzc2VkfTwvdGQ+XG4gICAgICAgICAgICAgICAgPC90cj5cbiAgICAgICAgICAgICAgKVxuICAgICAgICAgICAgfSl9XG4gICAgICAgICAgPC90Ym9keT5cbiAgICAgICAgPC90YWJsZT5cbiAgICAgIDwvZGl2PlxuICAgICAgPHN0eWxlIGpzeD57YFxuICAgICAgICAudGFibGUtcmVzcG9uc2l2ZSB7XG4gICAgICAgICAgb3ZlcmZsb3cteDogaW5pdGlhbDtcbiAgICAgICAgfVxuICAgICAgICAudGFibGUge1xuICAgICAgICAgIHdpZHRoOiAxMDAlO1xuICAgICAgICB9XG4gICAgICAgIC50YWJsZSB0aGVhZCB7XG4gICAgICAgICAgZm9udC13ZWlnaHQ6IGJvbGQ7XG4gICAgICAgIH1cbiAgICAgICAgLnRhYmxlIHRoZWFkIHRoIHtcbiAgICAgICAgICBjdXJzb3I6IHBvaW50ZXI7XG4gICAgICAgICAgcG9zaXRpb246IHN0aWNreTtcbiAgICAgICAgICB0b3A6IDA7XG4gICAgICAgICAgYmFja2dyb3VuZDogd2hpdGU7XG4gICAgICAgICAgbWluLXdpZHRoOiA4cmVtO1xuICAgICAgICB9XG4gICAgICAgIC50YWJsZSB0aGVhZCB0aCBzcGFuIHtcbiAgICAgICAgICBkaXNwbGF5OiBibG9jaztcbiAgICAgICAgICBmb250LXNpemU6IDAuNXJlbTtcbiAgICAgICAgfVxuICAgICAgICAudGFibGUgdGhlYWQgdGguYWN0aXZlIHtcbiAgICAgICAgICBjb2xvcjogYmx1ZTtcbiAgICAgICAgfVxuICAgICAgICBgfVxuICAgICAgPC9zdHlsZT5cbiAgICA8Lz5cbiAgKVxufVxuXG5leHBvcnQgZGVmYXVsdCBXYXJQZXJmb3JtYW5jZTtcbiJdfQ== */\n/*@ sourceURL=/Users/mbp/Sites/london-clash-nextjs/components/WarPerformance.js */"));
+  }, ".table-responsive.jsx-1736245729{overflow-x:initial;}.table.jsx-1736245729{width:100%;}.table.jsx-1736245729 thead.jsx-1736245729{font-weight:bold;}.table.jsx-1736245729 thead.jsx-1736245729 th.jsx-1736245729{cursor:pointer;position:-webkit-sticky;position:sticky;top:0;background:white;min-width:8rem;}.table.jsx-1736245729 thead.jsx-1736245729 th.jsx-1736245729 span.jsx-1736245729{display:block;font-size:0.5rem;}.table.jsx-1736245729 thead.jsx-1736245729 th.active.jsx-1736245729{color:blue;}table.jsx-1736245729 tbody.jsx-1736245729 td.jsx-1736245729:first-child.jsx-1736245729:not(.member){-webkit-text-decoration:line-through;text-decoration:line-through;font-weight:bold;background-color:grey !important;}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9tYnAvU2l0ZXMvbG9uZG9uLWNsYXNoLW5leHRqcy9jb21wb25lbnRzL1dhclBlcmZvcm1hbmNlLmpzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQTZJa0IsQUFHOEIsQUFHUixBQUdNLEFBR0YsQUFPRCxBQUlILEFBR2tCLFdBbkIvQixBQWlCQSxHQUptQixDQVBELEVBSGxCLEVBTkEsWUFpQkEsd0JBUFEsTUFDVyxLQVlBLFlBWEYsS0FZa0IsVUFYbkMsdUJBWUEiLCJmaWxlIjoiL1VzZXJzL21icC9TaXRlcy9sb25kb24tY2xhc2gtbmV4dGpzL2NvbXBvbmVudHMvV2FyUGVyZm9ybWFuY2UuanMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyB1c2VTdGF0ZSB9IGZyb20gJ3JlYWN0J1xuXG5jbGFzcyBXYXJVc2VyIHtcbiAgY29uc3RydWN0b3Ioe25hbWUsIHdpbnMsIGJhdHRsZXNQbGF5ZWQsIGNhcmRzRWFybmVkLCBudW1iZXJPZkJhdHRsZXN9KSB7XG4gICAgdGhpcy5uYW1lID0gbmFtZVxuICAgIHRoaXMud2lucyA9IHdpbnNcbiAgICB0aGlzLmJhdHRsZXMgPSBiYXR0bGVzUGxheWVkXG4gICAgdGhpcy50b3RhbEJhdHRsZXMgPSBudW1iZXJPZkJhdHRsZXNcbiAgICB0aGlzLmNhcmRzID0gY2FyZHNFYXJuZWRcbiAgICB0aGlzLmlzTWVtYmVyID0gdHJ1ZVxuICAgIHRoaXMubG9zc1N0cmVhayA9IDBcbiAgICB0aGlzLndpblN0cmVhayA9IDBcbiAgfVxuXG4gIGFkZFRvS2V5KGtleSwgdmFsdWUpIHtcbiAgICB0aGlzW2tleV0gKz0gdmFsdWVcbiAgfVxuXG4gIHNldE1lbWJlcihzdGF0ZSkge1xuICAgIHRoaXMuaXNNZW1iZXIgPSBzdGF0ZVxuICB9XG5cbiAgd2luTG9zcyh3aW5zLCBsb3NzZXMpIHtcbiAgICBpZiAobG9zc2VzID4gMCAmJiB3aW5zID09PSAwKSB7XG4gICAgICB0aGlzLmxvc3NTdHJlYWsgKz0gbG9zc2VzXG4gICAgICB0aGlzLndpblN0cmVhayA9IDBcbiAgICB9XG4gICAgaWYgKHdpbnMgPiAwKSB7XG4gICAgICB0aGlzLndpblN0cmVhayArPSB3aW5zXG4gICAgICB0aGlzLmxvc3NTdHJlYWsgPSAwXG4gICAgfVxuICB9XG5cbiAgZ2V0IGxvc3MoKSB7XG4gICAgcmV0dXJuIHRoaXMuYmF0dGxlcyAtIHRoaXMud2luc1xuICB9XG5cbiAgZ2V0IHJhdGlvKCkge1xuICAgIHJldHVybiB0aGlzLndpbnMgLyB0aGlzLnRvdGFsQmF0dGxlc1xuICB9XG5cbiAgZ2V0IGJhdHRsZXNNaXNzZWQoKSB7XG4gICAgcmV0dXJuIHRoaXMudG90YWxCYXR0bGVzIC0gdGhpcy5iYXR0bGVzXG4gIH1cblxuICBnZXQgaW5SZXNwZWN0KCkge1xuICAgIHJldHVybiB0aGlzLnJhdGlvID49IDAuNzUgfHwgdGhpcy5sb3NzID09PSAwICYmIHRoaXMubWlzc2VkID09PSAwXG4gIH1cblxuICBnZXQgaW5EYW5nZXIoKSB7XG4gICAgcmV0dXJuIHRoaXMucmF0aW8gPD0gMC4yNSB8fCB0aGlzLmJhdHRsZXNNaXNzZWQgPj0gM1xuICB9XG5cbiAgZ2V0IHNjb3JlKCkge1xuICAgIGlmICh0aGlzLmJhdHRsZXMgPT09IDApIHJldHVybiAwXG4gICAgcmV0dXJuICh0aGlzLndpbnMgKiAodGhpcy53aW5zIC8gdGhpcy5iYXR0bGVzKSAtICgodGhpcy5iYXR0bGVzTWlzc2VkICogMi41KSAqIHRoaXMuYmF0dGxlc01pc3NlZCkgKyAodGhpcy53aW5zICogMC41KSkudG9GaXhlZCgyKVxuICB9XG59XG5cbmNvbnN0IHByb2Nlc3NEYXRhID0gKGl0ZW1zLCBjbGFuKSA9PiB7XG4gIGxldCBwYXJ0aWNpcGFudHMgPSBbXVxuICBjb25zdCBmaW5kVXNlciA9IChuYW1lKSA9PiBwYXJ0aWNpcGFudHMuZmluZCgocCkgPT4gcC5uYW1lID09PSBuYW1lKTtcbiAgaXRlbXMuZm9yRWFjaCgod2FyLCBpKSA9PiB7XG4gICAgICB3YXIucGFydGljaXBhbnRzLmZvckVhY2goKHVzZXIpID0+IHtcbiAgICAgICAgICB2YXIgdXNlck9iaiA9IGZpbmRVc2VyKHVzZXIubmFtZSlcbiAgICAgICAgICBpZiAoISF1c2VyT2JqKSB7XG4gICAgICAgICAgICAgIHVzZXJPYmouYWRkVG9LZXkoJ2JhdHRsZXMnLCB1c2VyLmJhdHRsZXNQbGF5ZWQpXG4gICAgICAgICAgICAgIHVzZXJPYmouYWRkVG9LZXkoJ3dpbnMnLCB1c2VyLndpbnMpXG4gICAgICAgICAgICAgIHVzZXJPYmouYWRkVG9LZXkoJ2NhcmRzJywgdXNlci5jYXJkc0Vhcm5lZClcbiAgICAgICAgICAgICAgdXNlck9iai5hZGRUb0tleSgndG90YWxCYXR0bGVzJywgdXNlci5udW1iZXJPZkJhdHRsZXMpXG4gICAgICAgICAgfSBlbHNlIHtcbiAgICAgICAgICAgICAgdXNlck9iaiA9IG5ldyBXYXJVc2VyKHVzZXIpXG4gICAgICAgICAgICAgIHBhcnRpY2lwYW50cy5wdXNoKHVzZXJPYmopXG4gICAgICAgICAgfVxuICAgICAgICAgIC8vIHNldCBpcyBtZW1iZXJcbiAgICAgICAgICB1c2VyT2JqLnNldE1lbWJlcihjbGFuLm1lbWJlckxpc3QuZmluZChtID0+IG0ubmFtZSA9PT0gdXNlck9iai5uYW1lKSlcbiAgICAgICAgICAvLyByZWNvcmQgd2lucyBsb3NzZXMgcGVyIHdhclxuICAgICAgICAgIGxldCBsb3NzZXMgPSB1c2VyLm51bWJlck9mQmF0dGxlcyAtIHVzZXIud2luc1xuICAgICAgICAgIHVzZXJPYmoud2luTG9zcyh1c2VyLndpbnMsIGxvc3NlcylcbiAgICAgIH0pXG4gIH0pXG4gIHJldHVybiBwYXJ0aWNpcGFudHNcbn1cblxuY29uc3Qgc29ydERhdGEgPSAoaXRlbXMsIGtleSwgYWx0KSA9PiB7XG4gIHJldHVybiBpdGVtcy5zb3J0KChhLCBiKSA9PiBhbHQgPyBhW2tleV0gLSBiW2tleV0gOiBiW2tleV0gLSBhW2tleV0pXG59XG5cbmNvbnN0IFdhclBlcmZvcm1hbmNlID0gKHByb3BzKSA9PiB7XG4gIGNvbnN0IFtzb3J0LCBzZXRTb3J0XSA9IHVzZVN0YXRlKCdzY29yZScpXG4gIGNvbnN0IFthbHQsIHNldEFsdF0gPSB1c2VTdGF0ZShmYWxzZSlcbiAgY29uc3QgW2RhdGEsIHNldERhdGFdID0gdXNlU3RhdGUocHJvY2Vzc0RhdGEocHJvcHMuaXRlbXMsIHByb3BzLmNsYW4pKVxuXG4gIGNvbnN0IHNvcnRlZERhdGEgPSBzb3J0RGF0YShkYXRhLCBzb3J0LCBhbHQpXG5cbiAgY29uc3QgY2xpY2tTb3J0ID0gKG5ld1NvcnQpID0+IHtcbiAgICBpZiAobmV3U29ydCA9PT0gc29ydCkge1xuICAgICAgc2V0QWx0KCFhbHQpXG4gICAgfSBlbHNlIHtcbiAgICAgIHNldFNvcnQobmV3U29ydClcbiAgICB9XG4gIH1cblxuICByZXR1cm4gKFxuICAgIDw+XG4gICAgICA8ZGl2IGNsYXNzTmFtZT1cInRhYmxlLXJlc3BvbnNpdmVcIj5cbiAgICAgICAgPHRhYmxlIGNsYXNzTmFtZT17J3RhYmxlIHRhYmxlLXNtJ30+XG4gICAgICAgICAgPHRoZWFkPlxuICAgICAgICAgICAgPHRyPlxuICAgICAgICAgICAgICA8dGg+TmFtZTwvdGg+XG4gICAgICAgICAgICAgIDx0aCBjbGFzc05hbWU9e3NvcnQgPT09ICdzY29yZScgPyAnYWN0aXZlJyA6IG51bGx9IG9uQ2xpY2s9eygoKSA9PiBjbGlja1NvcnQoJ3Njb3JlJykpfT5TY29yZTwvdGg+XG4gICAgICAgICAgICAgIDx0aCBjbGFzc05hbWU9e3NvcnQgPT09ICd0b3RhbEJhdHRsZXMnID8gJ2FjdGl2ZScgOiBudWxsfSBvbkNsaWNrPXsoKCkgPT4gY2xpY2tTb3J0KCd0b3RhbEJhdHRsZXMnKSl9PlRvdGFsIEJhdHRsZXM8L3RoPlxuICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPXtzb3J0ID09PSAnd2lucycgPyAnYWN0aXZlJyA6IG51bGx9IG9uQ2xpY2s9eygoKSA9PiBjbGlja1NvcnQoJ3dpbnMnKSl9PldpbnM8L3RoPlxuICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPXtzb3J0ID09PSAnbG9zcycgPyAnYWN0aXZlJyA6IG51bGx9IG9uQ2xpY2s9eygoKSA9PiBjbGlja1NvcnQoJ2xvc3MnKSl9Pkxvc3NlczwvdGg+XG4gICAgICAgICAgICAgIDx0aCBjbGFzc05hbWU9e3NvcnQgPT09ICd3aW5TdHJlYWsnID8gJ2FjdGl2ZScgOiBudWxsfSBvbkNsaWNrPXsoKCkgPT4gY2xpY2tTb3J0KCd3aW5TdHJlYWsnKSl9PldpbiBTdHJlYWs8L3RoPlxuICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPXtzb3J0ID09PSAnbG9zc1N0cmVhaycgPyAnYWN0aXZlJyA6IG51bGx9IG9uQ2xpY2s9eygoKSA9PiBjbGlja1NvcnQoJ2xvc3NTdHJlYWsnKSl9Pkxvc3MgU3RyZWFrPC90aD5cbiAgICAgICAgICAgICAgPHRoIGNsYXNzTmFtZT17c29ydCA9PT0gJ3JhdGlvJyA/ICdhY3RpdmUnIDogbnVsbH0gb25DbGljaz17KCgpID0+IGNsaWNrU29ydCgncmF0aW8nKSl9PldpbiBSYXRpbzxzcGFuPndpbnMvYmF0dGxlczwvc3Bhbj48L3RoPlxuICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPXtzb3J0ID09PSAnYmF0dGxlc01pc3NlZCcgPyAnYWN0aXZlJyA6IG51bGx9IG9uQ2xpY2s9eygoKSA9PiBjbGlja1NvcnQoJ2JhdHRsZXNNaXNzZWQnKSl9PkJhdHRsZXMgTWlzc2VkPC90aD5cbiAgICAgICAgICAgIDwvdHI+XG4gICAgICAgICAgPC90aGVhZD5cbiAgICAgICAgICA8dGJvZHk+XG4gICAgICAgICAgICB7c29ydGVkRGF0YS5tYXAoKHAsIGkpID0+IHtcbiAgICAgICAgICAgICAgbGV0IGNsYXNzTmFtZSA9IHAuc2NvcmUgPCAtMSA/ICdiZy1kYW5nZXInIDogcC5zY29yZSA8PSAxID8gJ3RhYmxlLWRhbmdlcicgOiBwLnNjb3JlID49IDggPyAndGFibGUtd2FybmluZycgOiAndGFibGUtc3VjY2VzcydcbiAgICAgICAgICAgICAgY2xhc3NOYW1lICs9IHAuaXNNZW1iZXIgPyAnIG1lbWJlcicgOiAnJ1xuICAgICAgICAgICAgICByZXR1cm4gKFxuICAgICAgICAgICAgICAgIDx0ciBrZXk9e2l9PlxuICAgICAgICAgICAgICAgICAgPHRkIGNsYXNzTmFtZT17Y2xhc3NOYW1lfT57cC5uYW1lfTwvdGQ+XG4gICAgICAgICAgICAgICAgICA8dGQ+e3Auc2NvcmV9PC90ZD5cbiAgICAgICAgICAgICAgICAgIDx0ZD57cC50b3RhbEJhdHRsZXN9PC90ZD5cbiAgICAgICAgICAgICAgICAgIDx0ZD57cC53aW5zfTwvdGQ+XG4gICAgICAgICAgICAgICAgICA8dGQ+e3AubG9zc308L3RkPlxuICAgICAgICAgICAgICAgICAgPHRkPntwLndpblN0cmVha308L3RkPlxuICAgICAgICAgICAgICAgICAgPHRkPntwLmxvc3NTdHJlYWt9PC90ZD5cbiAgICAgICAgICAgICAgICAgIDx0ZD57cC5yYXRpby50b0ZpeGVkKDIpfTwvdGQ+XG4gICAgICAgICAgICAgICAgICA8dGQ+e3AuYmF0dGxlc01pc3NlZH08L3RkPlxuICAgICAgICAgICAgICAgIDwvdHI+XG4gICAgICAgICAgICAgIClcbiAgICAgICAgICAgIH0pfVxuICAgICAgICAgIDwvdGJvZHk+XG4gICAgICAgIDwvdGFibGU+XG4gICAgICA8L2Rpdj5cbiAgICAgIDxzdHlsZSBqc3g+e2BcbiAgICAgICAgLnRhYmxlLXJlc3BvbnNpdmUge1xuICAgICAgICAgIG92ZXJmbG93LXg6IGluaXRpYWw7XG4gICAgICAgIH1cbiAgICAgICAgLnRhYmxlIHtcbiAgICAgICAgICB3aWR0aDogMTAwJTtcbiAgICAgICAgfVxuICAgICAgICAudGFibGUgdGhlYWQge1xuICAgICAgICAgIGZvbnQtd2VpZ2h0OiBib2xkO1xuICAgICAgICB9XG4gICAgICAgIC50YWJsZSB0aGVhZCB0aCB7XG4gICAgICAgICAgY3Vyc29yOiBwb2ludGVyO1xuICAgICAgICAgIHBvc2l0aW9uOiBzdGlja3k7XG4gICAgICAgICAgdG9wOiAwO1xuICAgICAgICAgIGJhY2tncm91bmQ6IHdoaXRlO1xuICAgICAgICAgIG1pbi13aWR0aDogOHJlbTtcbiAgICAgICAgfVxuICAgICAgICAudGFibGUgdGhlYWQgdGggc3BhbiB7XG4gICAgICAgICAgZGlzcGxheTogYmxvY2s7XG4gICAgICAgICAgZm9udC1zaXplOiAwLjVyZW07XG4gICAgICAgIH1cbiAgICAgICAgLnRhYmxlIHRoZWFkIHRoLmFjdGl2ZSB7XG4gICAgICAgICAgY29sb3I6IGJsdWU7XG4gICAgICAgIH1cbiAgICAgICAgdGFibGUgdGJvZHkgdGQ6Zmlyc3QtY2hpbGQ6bm90KC5tZW1iZXIpIHtcbiAgICAgICAgICB0ZXh0LWRlY29yYXRpb246IGxpbmUtdGhyb3VnaDtcbiAgICAgICAgICBmb250LXdlaWdodDogYm9sZDtcbiAgICAgICAgICBiYWNrZ3JvdW5kLWNvbG9yOiBncmV5ICFpbXBvcnRhbnQ7XG4gICAgICAgIH1cbiAgICAgICAgYH1cbiAgICAgIDwvc3R5bGU+XG4gICAgPC8+XG4gIClcbn1cblxuZXhwb3J0IGRlZmF1bHQgV2FyUGVyZm9ybWFuY2U7XG4iXX0= */\n/*@ sourceURL=/Users/mbp/Sites/london-clash-nextjs/components/WarPerformance.js */"));
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (WarPerformance);
@@ -435,10 +494,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _api__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../api */ "./api/index.js");
 /* harmony import */ var _components_WarPerformance__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../components/WarPerformance */ "./components/WarPerformance.js");
-/* harmony import */ var shards_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! shards-react */ "shards-react");
-/* harmony import */ var shards_react__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(shards_react__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var moment__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! moment */ "moment");
-/* harmony import */ var moment__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(moment__WEBPACK_IMPORTED_MODULE_4__);
 var _jsxFileName = "/Users/mbp/Sites/london-clash-nextjs/pages/index.js";
 
 var __jsx = react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement;
@@ -448,24 +503,43 @@ function _extends() { _extends = Object.assign || function (target) { for (var i
 
 
 
+const ClanPage = props => {
+  return __jsx(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, __jsx("header", {
+    className: "p-4",
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 8
+    },
+    __self: undefined
+  }, __jsx("h1", {
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 9
+    },
+    __self: undefined
+  }, "Warlog")), __jsx(_components_WarPerformance__WEBPACK_IMPORTED_MODULE_2__["default"], _extends({
+    clan: props.clan
+  }, props.warlog, {
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 11
+    },
+    __self: undefined
+  })));
+};
 
-
-const HomePage = props => __jsx(react__WEBPACK_IMPORTED_MODULE_0___default.a.Fragment, null, __jsx(_components_WarPerformance__WEBPACK_IMPORTED_MODULE_2__["default"], _extends({}, props.warlog, {
-  __source: {
-    fileName: _jsxFileName,
-    lineNumber: 10
-  },
-  __self: undefined
-})));
-
-HomePage.getInitialProps = async function () {
+ClanPage.getInitialProps = async function () {
   const warlog = await Object(_api__WEBPACK_IMPORTED_MODULE_1__["WarLog"])();
+  warlog.items.reverse(); // flip order or wars oldest first
+
+  const clan = await Object(_api__WEBPACK_IMPORTED_MODULE_1__["Clan"])();
   return {
-    warlog
+    warlog,
+    clan
   };
 };
 
-/* harmony default export */ __webpack_exports__["default"] = (HomePage);
+/* harmony default export */ __webpack_exports__["default"] = (ClanPage);
 
 /***/ }),
 
@@ -492,17 +566,6 @@ module.exports = require("isomorphic-unfetch");
 
 /***/ }),
 
-/***/ "moment":
-/*!*************************!*\
-  !*** external "moment" ***!
-  \*************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("moment");
-
-/***/ }),
-
 /***/ "react":
 /*!************************!*\
   !*** external "react" ***!
@@ -511,17 +574,6 @@ module.exports = require("moment");
 /***/ (function(module, exports) {
 
 module.exports = require("react");
-
-/***/ }),
-
-/***/ "shards-react":
-/*!*******************************!*\
-  !*** external "shards-react" ***!
-  \*******************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("shards-react");
 
 /***/ }),
 
